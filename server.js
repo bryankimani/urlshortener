@@ -21,7 +21,7 @@ const { Schema } = mongoose;
 
 const urlSchema = new Schema({
   longUrl: { type:String, required: true},
-  shorUrl: { type:String, required: true}
+  shortUrl: { type:String, required: true}
 });
 
 
@@ -53,34 +53,61 @@ app.get('/api/hello', function(req, res) {
 
 app.post('/api/shorturl', function(req, res) {
 
-  const submittedUrl = req.body.url;
-
-  dns.resolve(submittedUrl, (err, value) => { 
-    if(err) { 
-        console.log(err); 
-        res.send({ error: 'invalid url' }) 
-    } 
-
-    let urlExists = Url.findOne({longUrl: submittedUrl});
-
-    if (urlExists) {
-      res.send(urlExists) 
+  function validURL(str) {
+    var regex = /(http|https):\/\/(\w+:{0,1}\w*)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%!\-\/]))?/;
+    if(!regex .test(str)) {
+      return false;
     } else {
-      // if valid, we create the url code
-      const shortUrlCode = shortid.generate();
-
-      const url = new Url({submittedUrl,shortUrlCode});
-      url.save(function(err, data) {
-        if (err) {
-          res.send({ error: err});
-          done(err);
-        }
-        res.send({ original_url: submittedUrl, short_url: shortUrlCode});
-        done(null, data);
-      });
-       
+      return true;
     }
-  }) 
+  };
+
+  const submittedUrl = req.body.url;
+  const isSubmittedUrlValid = validURL(submittedUrl);
+
+  if (isSubmittedUrlValid) {
+    // if valid, we create the url code
+    Url.exists({longUrl: submittedUrl}, function(err, longUrlExists) {
+      if (err) res.send({error : err});
+
+      if (longUrlExists) {
+        res.send({message: "Submitted URL exists"});
+      } else {
+        
+        const shortUrlCode = shortid.generate();
+
+        const url = new Url({longUrl: submittedUrl, shortUrl: shortUrlCode});
+        console.log(shortUrlCode + " " + url);
+
+        url.save(function(err, data) {
+          if (err) {
+            console.log(err);
+            res.send({ error: err});
+          }
+          console.log(data);
+          res.send({ original_url: submittedUrl, short_url: shortUrlCode});
+        });
+      }
+    });
+  } else {
+    res.send({ error: 'invalid url' });
+  }
+});
+
+app.get('/api/shorturl/:shortUrl/', function(req, res) {
+
+  const submittedShortUrl = req.params.shortUrl;
+
+  Url.findOne({shortUrl: submittedShortUrl}, function(err, result) {
+      if (err) res.send({error : err});
+
+      if(result !== null && result.longUrl !== null) {
+        res.redirect(result.longUrl);
+      } else {
+        res.send({ error: "That shortUrl is not associated with any URL"});
+      }
+  });
+
 });
 
 
