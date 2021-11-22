@@ -61,7 +61,25 @@ app.post('/api/shorturl', function(req, res) {
         res.send({ error: 'invalid url' }) 
     } 
 
-    res.send({ original_url: submittedUrl, short_url:  }) 
+    let urlExists = Url.findOne({longUrl: submittedUrl});
+
+    if (urlExists) {
+      res.send(urlExists) 
+    } else {
+      // if valid, we create the url code
+      const shortUrlCode = shortid.generate();
+
+      const url = new Url({submittedUrl,shortUrlCode});
+      url.save(function(err, data) {
+        if (err) {
+          res.send({ error: err});
+          done(err);
+        }
+        res.send({ original_url: submittedUrl, short_url: shortUrlCode});
+        done(null, data);
+      });
+       
+    }
   }) 
 });
 
