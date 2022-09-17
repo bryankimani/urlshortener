@@ -38,11 +38,30 @@ app.use(bodyParser.urlencoded({ extended: true }))
 app.use(bodyParser.json());
 app.use(bodyParser.raw());
 
+app.engine('html', require('ejs').renderFile);
 
 app.use('/public', express.static(`${process.cwd()}/public`));
 
 app.get('/', function(req, res) {
   res.sendFile(process.cwd() + '/views/index.html');
+});
+
+app.get('/login', function(req, res) {
+  res.sendFile(process.cwd() + '/views/sign-in.html');
+});
+
+app.get('/faqs', function(req, res) {
+  res.sendFile(process.cwd() + '/views/faq.html');
+});
+
+app.get('/rates', function(req, res) {
+  res.sendFile(process.cwd() + '/views/payout-rates.html');
+});
+
+
+
+app.get('/register', function(req, res) {
+  res.sendFile(process.cwd() + '/views/sign-up.html');
 });
 
 // Your first API endpoint
@@ -85,7 +104,7 @@ app.post('/api/shorturl', function(req, res) {
             res.send({ error: err});
           }
           console.log(data);
-          res.send({ original_url: submittedUrl, short_url: shortUrlCode});
+          res.redirect('/urls');
         });
       }
     });
@@ -107,6 +126,22 @@ app.get('/api/shorturl/:shortUrl/', function(req, res) {
         res.send({ error: "That shortUrl is not associated with any URL"});
       }
   });
+
+});
+
+app.get('/urls', function(req, res) {
+
+
+  Url.find({}, function(err, results) {
+      if (err) res.render(__dirname + '/views/url.html', {error : err});
+
+      if(results !== null ) {
+        console.log(results);
+        res.render(__dirname  + '/views/url.html', {results});
+      } else {
+        res.render(__dirname  + '/views/url.html', { error: "That shortUrl is not associated with any URL"});
+      }
+  }).sort({_id: 'desc'});
 
 });
 
